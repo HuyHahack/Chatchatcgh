@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat CGH - AI Siêu Thông Minh</title>
+    <title>Chat CGH - Gemini 2.0 Pro Exp</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background: #f9f9f9;
             text-align: center;
+            margin: 0;
+            padding: 0;
         }
 
         .chat-container {
@@ -91,7 +93,7 @@
 </head>
 <body>
     <div class="chat-container">
-        <h1>Chat CGH AI</h1>
+        <h1>Chat CGH</h1>
         <p id="limit-info"></p>
         <div class="chat-box" id="chat-box"></div>
         <div class="input-box">
@@ -101,29 +103,9 @@
     </div>
 
     <script>
-        const API_URL = "https://free.churchless.tech/v1/chat/completions"; // API Free
-        const MODEL = "gpt-3.5-turbo"; // Model AI
-        const MAX_CHATS = 10; // Số lần chat tối đa trong 30 phút
-        const CHAT_RESET_TIME = 30 * 60 * 1000; // 30 phút (tính bằng mili giây)
-
-        function getChatCount() {
-            let chatData = JSON.parse(localStorage.getItem("chat_limit")) || { count: 0, startTime: Date.now() };
-            let elapsedTime = Date.now() - chatData.startTime;
-
-            if (elapsedTime > CHAT_RESET_TIME) {
-                chatData = { count: 0, startTime: Date.now() };
-            }
-
-            localStorage.setItem("chat_limit", JSON.stringify(chatData));
-            return chatData;
-        }
-
-        function updateLimitInfo() {
-            let chatData = getChatCount();
-            let remainingChats = MAX_CHATS - chatData.count;
-            let timeLeft = Math.ceil((CHAT_RESET_TIME - (Date.now() - chatData.startTime)) / 60000);
-            document.getElementById("limit-info").innerText = `Còn ${remainingChats} lần chat - Reset sau ${timeLeft} phút`;
-        }
+        const API_URL = "https://openrouter.ai/api/v1/chat/completions";
+        const MODEL = "google/gemini-2.0-pro-exp-02-05:free";
+        const API_KEY = "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"; // Dán API Key OpenRouter vào đây
 
         function appendMessage(sender, message, isUser) {
             let chatBox = document.getElementById("chat-box");
@@ -135,12 +117,6 @@
         }
 
         async function sendMessage() {
-            let chatData = getChatCount();
-            if (chatData.count >= MAX_CHATS) {
-                alert("Bạn đã hết lượt chat! Đợi 30 phút để tiếp tục.");
-                return;
-            }
-
             let userInput = document.getElementById("user-input").value;
             if (!userInput) return;
 
@@ -156,7 +132,10 @@
             try {
                 let response = await fetch(API_URL, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${API_KEY}`
+                    },
                     body: JSON.stringify({
                         model: MODEL,
                         messages: [{ role: "user", content: userInput }]
@@ -167,18 +146,11 @@
                 let botMessage = data.choices[0].message.content;
                 document.getElementById("chat-box").removeChild(typingDiv);
                 appendMessage("CGH AI", botMessage, false);
-
-                // Cập nhật số lần chat
-                chatData.count++;
-                localStorage.setItem("chat_limit", JSON.stringify(chatData));
-                updateLimitInfo();
             } catch (error) {
                 document.getElementById("chat-box").removeChild(typingDiv);
                 appendMessage("CGH AI", "Lỗi API! Vui lòng thử lại.", false);
             }
         }
-
-        updateLimitInfo();
     </script>
 </body>
 </html>
