@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat CGH - AI Siêu Thông Minh</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f9f9f9;
+            text-align: center;
+        }
+
+        .chat-container {
+            width: 90%;
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-box {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background: #fff;
+        }
+
+        .message {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .user-message {
+            background: #0084ff;
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background: #e0e0e0;
+            color: black;
+            align-self: flex-start;
+            margin-right: auto;
+        }
+
+        .typing {
+            font-style: italic;
+            color: gray;
+        }
+
+        .input-box {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        input {
+            width: 75%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        button {
+            width: 20%;
+            padding: 10px;
+            background: #0084ff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 10px;
+        }
+
+        button:hover {
+            background: #006fd6;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h1>Chat CGH AI</h1>
+        <p id="limit-info"></p>
+        <div class="chat-box" id="chat-box"></div>
+        <div class="input-box">
+            <input type="text" id="user-input" placeholder="Nhập tin nhắn...">
+            <button onclick="sendMessage()">Gửi</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://free.churchless.tech/v1/chat/completions"; // API Free
+        const MODEL = "gpt-3.5-turbo"; // Model AI
+        const MAX_CHATS = 10; // Số lần chat tối đa trong 30 phút
+        const CHAT_RESET_TIME = 30 * 60 * 1000; // 30 phút (tính bằng mili giây)
+
+        function getChatCount() {
+            let chatData = JSON.parse(localStorage.getItem("chat_limit")) || { count: 0, startTime: Date.now() };
+            let elapsedTime = Date.now() - chatData.startTime;
+
+            if (elapsedTime > CHAT_RESET_TIME) {
+                chatData = { count: 0, startTime: Date.now() };
+            }
+
+            localStorage.setItem("chat_limit", JSON.stringify(chatData));
+            return chatData;
+        }
+
+        function updateLimitInfo() {
+            let chatData = getChatCount();
+            let remainingChats = MAX_CHATS - chatData.count;
+            let timeLeft = Math.ceil((CHAT_RESET_TIME - (Date.now() - chatData.startTime)) / 60000);
+            document.getElementById("limit-info").innerText = `Còn ${remainingChats} lần chat - Reset sau ${timeLeft} phút`;
+        }
+
+        function appendMessage(sender, message, isUser) {
+            let chatBox = document.getElementById("chat-box");
+            let msgDiv = document.createElement("div");
+            msgDiv.classList.add("message", isUser ? "user-message" : "bot-message");
+            msgDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function sendMessage() {
+            let chatData = getChatCount();
+            if (chatData.count >= MAX_CHATS) {
+                alert("Bạn đã hết lượt chat! Đợi 30 phút để tiếp tục.");
+                return;
+            }
+
+            let userInput = document.getElementById("user-input").value;
+            if (!userInput) return;
+
+            appendMessage("Bạn", userInput, true);
+            document.getElementById("user-input").value = "";
+
+            // Hiện animation chữ chạy khi AI trả lời
+            let typingDiv = document.createElement("div");
+            typingDiv.classList.add("message", "bot-message", "typing");
+            typingDiv.innerText = "CGH AI đang gõ...";
+            document.getElementById("chat-box").appendChild(typingDiv);
+
+            try {
+                let response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model: MODEL,
+                        messages: [{ role: "user", content: userInput }]
+                    })
+                });
+
+                let data = await response.json();
+                let botMessage = data.choices[0].message.content;
+                document.getElementById("chat-box").removeChild(typingDiv);
+                appendMessage("CGH AI", botMessage, false);
+
+                // Cập nhật số lần chat
+                chatData.count++;
+                localStorage.setItem("chat_limit", JSON.stringify(chatData));
+                updateLimitInfo();
+            } catch (error) {
+                document.getElementById("chat-box").removeChild(typingDiv);
+                appendMessage("CGH AI", "Lỗi API! Vui lòng thử lại.", false);
+            }
+        }
+
+        updateLimitInfo();
+    </script>
+</body>
+</html>
